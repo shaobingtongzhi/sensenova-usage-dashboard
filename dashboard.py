@@ -424,7 +424,7 @@ body { font-family: -apple-system, "Microsoft YaHei", "Segoe UI", sans-serif; ba
 .summary-card .label { font-size: 11px; color: #888; }
 .summary-card .value { font-size: 22px; font-weight: 700; margin-top: 2px; }
 .account-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 14px; overflow: hidden; }
-.account-header { padding: 12px 18px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.account-header { padding: 12px 18px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
 .account-header .name { font-size: 15px; font-weight: 600; }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .badge-ok { background: #e6f7e6; color: #52c41a; }
@@ -469,8 +469,8 @@ tr:hover td { background: #fafafa; }
 .howto { font-size: 11px; color: #888; line-height: 1.7; margin-bottom: 10px; background: #f6f8fa; padding: 10px 14px; border-radius: 6px; }
 .howto b { color: #333; }
 
-/* 积分池卡片（竖向布局，无需横向滚动） */
-.pool-card { background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+/* 积分池卡片（账号卡内纵向堆叠，四周留内边距） */
+.pool-card { background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px 12px; margin: 10px 12px; }
 .pool-head { margin-bottom: 8px; }
 .pool-name { font-size: 13px; font-weight: 600; }
 .pool-block { padding: 5px 0; border-top: 1px dashed #f0f0f0; }
@@ -505,6 +505,39 @@ tr:hover td { background: #fafafa; }
 .account-collapse-header .hint { font-size: 11px; color: #aaa; }
 .account-collapse-body { display: none; padding-top: 8px; }
 .account-collapse-body.expanded { display: block; }
+
+/* ===== 布局：竖屏单列（概览 → 明细 → 配置置底） / 横屏双栏 ===== */
+.layout { display: flex; flex-direction: column; gap: 14px; }
+.layout-left, .layout-right { display: contents; }
+.layout .config-panel, .layout .account-collapse { margin-bottom: 0; }
+.gauge-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 14px 16px 16px; order: 1; }
+.ov-header { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.gauge-section { margin-bottom: 0; }
+.account-collapse { order: 2; }
+.config-panel { order: 3; }
+
+/* 积分池显隐开关（眼睛图标） */
+.pool-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pool-eye { background: none; border: none; cursor: pointer; color: #888; padding: 2px 4px; display: flex; align-items: center; border-radius: 4px; flex-shrink: 0; }
+.pool-eye:hover { color: #0958d9; background: #f0f5ff; }
+
+/* 横屏（≥640px）：左窄栏（双环纵排 + 账号配置） + 右栏账号明细（账号并排成列） */
+@media (min-width: 640px) {
+  .layout { flex-direction: row; align-items: flex-start; gap: 16px; }
+  .layout-left { display: flex; flex-direction: column; gap: 16px; width: 232px; flex-shrink: 0; }
+  .layout-right { display: block; flex: 1; min-width: 0; }
+  .gauge-section { flex-direction: column; align-items: center; gap: 18px; }
+  .gauge-wrap { flex: 0 0 auto; width: 100%; }
+  /* 账号卡片并排成列（宽度不够时自动折行），账号内积分池保持纵向堆叠 */
+  #accounts { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; align-items: start; }
+  .account-card { margin-bottom: 0; }
+  .config-row { flex-wrap: wrap; row-gap: 6px; }
+  .config-row .col-user, .config-row .col-pass { flex: 1 1 calc(50% - 3px); min-width: 0; }
+  .config-row .col-actions { margin-left: auto; }
+  .config-actions { flex-wrap: wrap; }
+  .config-actions .btn { flex: 1 1 0; }
+  .config-actions .save-status { flex-basis: 100%; margin-left: 0; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -516,35 +549,44 @@ tr:hover td { background: #fafafa; }
   </div>
 </div>
 <div class="container">
-  <div class="config-panel">
-    <div class="config-header" onclick="toggleConfig()">
-      <span class="title">账号配置</span>
-      <span class="hint">展开/收起</span>
-      <span class="collapse-icon" id="configIcon">▼</span>
-    </div>
-    <div class="config-body" id="configBody" style="display:none;">
-      <div class="howto">
-        填写「用户名」「密码」后点 <b>登录</b>，自动换取并保存 JWT；约 3 小时过期后会用保存的密码自动重新登录，无需再管。
-      </div>
-      <div id="accountRows"></div>
-      <div class="config-actions">
-        <button class="btn btn-sm" onclick="addAccountRow()">+ 添加账号</button>
-        <button class="btn btn-sm btn-primary" onclick="saveConfig()">保存配置</button>
-        <span class="save-status" id="saveStatus">已保存</span>
-      </div>
-    </div>
-  </div>
   <div id="loading" class="loading"><div class="spinner"></div><p style="margin-top:10px">正在查询用量...</p></div>
   <div id="content" style="display:none">
-    <div class="gauge-section" id="gauges"></div>
-    <div class="account-collapse">
-      <div class="account-collapse-header" onclick="toggleAccounts()">
-        <span class="title">账号明细</span>
-        <span class="hint">展开/收起</span>
-        <span class="collapse-icon" id="accountsIcon">▼</span>
+    <div class="layout">
+      <div class="layout-left">
+        <div class="gauge-card">
+          <div class="ov-header">用量概览</div>
+          <div class="gauge-section" id="gauges"></div>
+        </div>
+        <div class="config-panel">
+          <div class="config-header" onclick="toggleConfig()">
+            <span class="title">账号配置</span>
+            <span class="hint">展开/收起</span>
+            <span class="collapse-icon" id="configIcon">▼</span>
+          </div>
+          <div class="config-body" id="configBody">
+            <div class="howto">
+              填写「用户名」「密码」后点 <b>登录</b>，自动换取并保存 JWT；约 3 小时过期后会用保存的密码自动重新登录，无需再管。
+            </div>
+            <div id="accountRows"></div>
+            <div class="config-actions">
+              <button class="btn btn-sm" onclick="addAccountRow()">+ 添加账号</button>
+              <button class="btn btn-sm btn-primary" onclick="saveConfig()">保存配置</button>
+              <span class="save-status" id="saveStatus">已保存</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="account-collapse-body" id="accountsBody">
-        <div id="accounts" style="padding: 8px 0 0;"></div>
+      <div class="layout-right">
+        <div class="account-collapse">
+          <div class="account-collapse-header" onclick="toggleAccounts()">
+            <span class="title">账号明细</span>
+            <span class="hint">展开/收起</span>
+            <span class="collapse-icon" id="accountsIcon">▼</span>
+          </div>
+          <div class="account-collapse-body" id="accountsBody">
+            <div id="accounts" style="padding: 8px 0 0;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -566,6 +608,25 @@ function toggleAccounts() {
   if (body.classList.contains('expanded')) { body.classList.remove('expanded'); icon.classList.add('collapsed'); }
   else { body.classList.add('expanded'); icon.classList.remove('collapsed'); }
 }
+
+function eyeSvg(hidden) {
+  return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>' +
+    '<circle cx="12" cy="12" r="3"></circle>' +
+    (hidden ? '<line x1="4" y1="4" x2="20" y2="20"></line>' : '') +
+    '</svg>';
+}
+
+function togglePool(btn, key) {
+  var body = btn.closest('.pool-card').querySelector('.pool-body');
+  var show = (body.style.display === 'none');
+  body.style.display = show ? '' : 'none';
+  btn.innerHTML = eyeSvg(!show);
+  btn.title = show ? '隐藏该积分池' : '显示该积分池';
+  try { localStorage.setItem('snPoolHidden:' + key, show ? '0' : '1'); } catch(e) {}
+}
+
+function escAttr(s) { return escHtml(String(s == null ? '' : s)).replace(/'/g, '&#39;'); }
 
 function fmt(n) {
   n = parseFloat(n) || 0;
@@ -784,8 +845,13 @@ function renderData(data) {
       var tagText = item.pool_type==='default'?'通用':'专属';
       var grantText = item.grant_balance;
       if (item.nearest_expiry) grantText += ' (至' + item.nearest_expiry + ')';
+      var poolKey = (a.username||'') + '|' + (item.pool_type||'') + '|' + item.pool_name;
+      var poolHidden = false;
+      try { poolHidden = localStorage.getItem('snPoolHidden:' + poolKey) === '1'; } catch(e) {}
       h += '<div class="pool-card">';
-      h += '<div class="pool-head"><span class="pool-name"><span class="tag '+tagCls+'">'+tagText+'</span>'+escHtml(item.pool_name)+'</span></div>';
+      h += '<div class="pool-head"><span class="pool-name"><span class="tag '+tagCls+'">'+tagText+'</span>'+escHtml(item.pool_name)+'</span>' +
+        '<button class="pool-eye" title="' + (poolHidden ? '显示该积分池' : '隐藏该积分池') + '" onclick="togglePool(this, \'' + escAttr(poolKey) + '\')">' + eyeSvg(poolHidden) + '</button></div>';
+      h += '<div class="pool-body"' + (poolHidden ? ' style="display:none;"' : '') + '>';
       h += '<div class="pool-block">';
       h += '<div class="pool-stat"><span class="k">5小时用量</span><span class="v">'+item.used_5h+' / '+item.limit_5h+'</span></div>';
       h += '<div class="pool-bar"><span class="pool-bar-fill '+cls+'" style="width:'+Math.min(pct,100)+'%"></span></div>';
@@ -798,6 +864,7 @@ function renderData(data) {
       h += '</div>';
       h += '<div class="pool-stat"><span class="k">赠送余额</span><span class="v" style="font-size:11px;color:#888;font-weight:400">'+grantText+'</span></div>';
       h += '<div class="pool-stat"><span class="k">刷新时间 5h / 7d</span><span class="v" style="font-size:11px;color:#888;font-weight:400">'+item.reset_at+' / '+item.reset_at_7d+'</span></div>';
+      h += '</div>';
       h += '</div>';
     });
     h += '</div>';
